@@ -14,17 +14,17 @@
 
   <style>
     :root {
-      --bg: #0d1117;
-      --paper: #161b22;
-      --paper2: #1c2230;
-      --ink: #e6edf3;
-      --muted: #8b949e;
-      --line: #30363d;
-      --accent: #39d353;
-      --accent2: #58a6ff;
-      --accent3: #f78166;
-      --accent4: #d2a8ff;
-      --warn: #e3b341;
+      --bg: #f0f4f8;
+      --paper: #ffffff;
+      --paper2: #e8eef5;
+      --ink: #1a2332;
+      --muted: #3d4f63;
+      --line: #c8d4e0;
+      --accent: #1a6b4a;
+      --accent2: #1a56a0;
+      --accent3: #c05a00;
+      --accent4: #6b3fa0;
+      --warn: #b45309;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -58,7 +58,7 @@
       font-size: clamp(3rem, 7vw, 6.5rem);
       font-weight: 900;
       line-height: 0.92;
-      background: linear-gradient(135deg, #e6edf3 0%, #58a6ff 50%, #39d353 100%);
+      background: linear-gradient(135deg, #1a2332 0%, #1a56a0 60%, #1a6b4a 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
@@ -67,9 +67,9 @@
 
     .subtitle {
       max-width: 680px;
-      color: var(--muted);
-      font-size: 1.05rem;
-      font-weight: 300;
+      color: var(--ink);
+      font-size: 1.15rem;
+      font-weight: 400;
     }
 
     /* ── MAIN LAYOUT ── */
@@ -97,6 +97,14 @@
       background: linear-gradient(90deg, var(--accent2), var(--accent));
     }
 
+    .stat-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--accent2);
+    }
+
     .section-intro {
       display: grid;
       grid-template-columns: minmax(0, 1fr) minmax(0, 1.8fr);
@@ -107,7 +115,7 @@
 
     h2 {
       font-family: 'Playfair Display', serif;
-      font-size: 1.6rem;
+      font-size: 1.85rem;
       font-weight: 700;
       line-height: 1.2;
       color: var(--ink);
@@ -124,10 +132,11 @@
 
     .note {
       color: var(--muted);
-      font-size: 0.95rem;
-      font-weight: 300;
+      font-size: 1.15rem;
+      font-weight: 400;
       border-left: 3px solid var(--accent2);
       padding-left: 14px;
+      line-height: 1.7;
     }
 
     .chart {
@@ -152,24 +161,17 @@
       overflow: hidden;
     }
 
-    .stat-card::after {
-      content: '';
-      position: absolute;
-      bottom: 0; left: 0; right: 0;
-      height: 2px;
-      background: var(--accent);
-    }
-
     .stat-card strong {
       display: block;
       font-family: 'Playfair Display', serif;
-      font-size: 1.8rem;
-      color: var(--accent);
+      font-size: 2rem;
+      color: var(--accent2);
       margin-bottom: 6px;
     }
 
     .stat-card span {
-      font-size: 0.85rem;
+      font-size: 0.95rem;
+      font-weight: 500;
       color: var(--muted);
     }
 
@@ -229,9 +231,10 @@
         <h2>Where do the most people breathe this air?</h2>
       </div>
       <p class="note">
-        State-level choropleth showing 2025 population. The air pollution dataset is national monthly data,
-        so this contextualises exposure risk — not the pollution level itself.
-        Selangor and KL concentrations represent Malaysia's largest exposure zone.
+        Choropleth showing each state's <strong>share of Malaysia's total population (%)</strong>.
+        Since the air pollution dataset is national-level, population share is the best available
+        proxy for relative exposure risk — states with a larger share bear a proportionally
+        greater collective burden when air quality deteriorates nationally.
       </p>
     </div>
     <div id="map-population" class="chart"></div>
@@ -494,23 +497,27 @@
         axis: {
           labelFont: "'DM Sans', sans-serif",
           titleFont: "'DM Sans', sans-serif",
-          labelColor: "#8b949e",
-          titleColor: "#8b949e",
-          gridColor: "#21262d",
-          domainColor: "#30363d",
-          tickColor: "#30363d"
+          labelColor: "#1a2332",
+          titleColor: "#1a2332",
+          labelFontSize: 13,
+          titleFontSize: 14,
+          gridColor: "#dce6f0",
+          domainColor: "#c8d4e0",
+          tickColor: "#c8d4e0"
         },
         legend: {
           labelFont: "'DM Sans', sans-serif",
           titleFont: "'DM Sans', sans-serif",
-          labelColor: "#8b949e",
-          titleColor: "#8b949e",
+          labelColor: "#1a2332",
+          titleColor: "#1a2332",
+          labelFontSize: 13,
+          titleFontSize: 13,
           orient: "bottom"
         },
         title: {
           font: "'Playfair Display', serif",
-          color: "#e6edf3",
-          fontSize: 15,
+          color: "#1a2332",
+          fontSize: 16,
           anchor: "start"
         }
       }
@@ -550,6 +557,10 @@
     })).filter(d => d.year === 2025 && d.sex === "both" && d.age === "overall" && d.ethnicity === "overall");
 
     const popByKey = new Map(pop2025.map(d => [d.key, d]));
+
+    // national mean PM2.5 — used as proxy for all states (data is national-level)
+    const nationalPM25Mean = d3.mean(air.filter(d => d.pollutant === "PM2.5"), d => d.concentration);
+
     geoFeatures.forEach(f => {
       const rawName = f.properties.shapeName || f.properties.NAME_1 || f.properties.name || f.properties.Name;
       const key = normaliseStateName(rawName);
@@ -557,6 +568,13 @@
       f.properties.state_name = rawName;
       f.properties.population = p ? p.population : null;
       f.properties.population_million = p ? p.population / 1_000_000 : null;
+      // PM2.5 exposure index: national mean × state population share (as % of total)
+      const totalPop = d3.sum(pop2025, d => d.population);
+      const popShare = (p && totalPop > 0) ? (p.population / totalPop) * 100 : null;
+      f.properties.exposure_index = (popShare !== null && nationalPM25Mean)
+        ? +(nationalPM25Mean * (popShare / 100) * 10).toFixed(3)
+        : null;
+      f.properties.pop_share_pct = popShare !== null ? +popShare.toFixed(2) : null;
     });
 
     const bubblePoints = geoFeatures.map(f => {
@@ -580,16 +598,17 @@
       width: 820, height: 460,
       data: { values: geoFeatures },
       projection: { type: "mercator" },
-      mark: { type: "geoshape", stroke: "#0d1117", strokeWidth: 1.2 },
+      mark: { type: "geoshape", stroke: "#ffffff", strokeWidth: 1.2 },
       encoding: {
         color: {
-          field: "properties.population_million",
+          field: "properties.pop_share_pct",
           type: "quantitative",
-          title: "Population 2025 (M)",
-          scale: { scheme: "greens", domainMin: 0 }
+          title: "Population share (%)",
+          scale: { scheme: "blues", domainMin: 0 }
         },
         tooltip: [
           { field: "properties.state_name", type: "nominal", title: "State" },
+          { field: "properties.pop_share_pct", type: "quantitative", title: "Population share (%)", format: ".1f" },
           { field: "properties.population_million", type: "quantitative", title: "Population (M)", format: ".2f" }
         ]
       }
@@ -601,13 +620,13 @@
   function renderBubbleMap(geoFeatures, bubblePoints) {
     const spec = {
       ...baseConfig(),
-      background: "#1a2332",
+      background: "#dce6f5",
       width: 820, height: 460,
       layer: [
         {
           data: { values: geoFeatures },
           projection: { type: "mercator" },
-          mark: { type: "geoshape", fill: "#2d4a6e", stroke: "#4a7ab5", strokeWidth: 1.2 }
+          mark: { type: "geoshape", fill: "#b8cfe8", stroke: "#ffffff", strokeWidth: 1.2 }
         },
         {
           data: { values: bubblePoints },
@@ -669,7 +688,7 @@
         // Filled area – total
         {
           data: { values: pm25data },
-          mark: { type: "area", opacity: 0.12, color: "#58a6ff" },
+          mark: { type: "area", opacity: 0.15, color: "#1a56a0" },
           encoding: {
             x: { field: "date", type: "temporal", title: null },
             y: { field: "concentration", type: "quantitative", title: "PM2.5 (µg/m³)" }
@@ -678,7 +697,7 @@
         // Line
         {
           data: { values: pm25data },
-          mark: { type: "line", strokeWidth: 2.5, color: "#58a6ff" },
+          mark: { type: "line", strokeWidth: 2.5, color: "#1a56a0" },
           encoding: {
             x: { field: "date", type: "temporal", title: null },
             y: { field: "concentration", type: "quantitative" },
@@ -737,7 +756,7 @@
           field: "pollutant", type: "nominal", title: "Pollutant",
           scale: {
             domain: pollutants,
-            range: ["#58a6ff", "#39d353", "#f78166", "#d2a8ff", "#e3b341", "#79c0ff"]
+            range: ["#1a56a0", "#e07b00", "#7b2d8b", "#0891b2", "#e05c9a", "#2d8b4a"]
           }
         },
         tooltip: [
@@ -785,7 +804,7 @@
               field: "pollutant", type: "nominal", title: "Pollutant",
               scale: {
                 domain: pollutants,
-                range: ["#58a6ff", "#39d353", "#f78166", "#d2a8ff", "#e3b341", "#79c0ff"]
+                range: ["#1a56a0", "#e07b00", "#7b2d8b", "#0891b2", "#e05c9a", "#2d8b4a"]
               }
             },
             tooltip: [
@@ -810,7 +829,7 @@
               field: "pollutant", type: "nominal",
               scale: {
                 domain: pollutants,
-                range: ["#58a6ff", "#39d353", "#f78166", "#d2a8ff", "#e3b341", "#79c0ff"]
+                range: ["#1a56a0", "#e07b00", "#7b2d8b", "#0891b2", "#e05c9a", "#2d8b4a"]
               }
             }
           }
@@ -880,7 +899,7 @@
       layer: [
         {
           data: { values: [{ r: 65 }, { r: 130 }, { r: 210 }] },
-          mark: { type: "circle", fill: null, stroke: "#30363d", strokeWidth: 1 },
+          mark: { type: "circle", fill: null, stroke: "#c8d4e0", strokeWidth: 1 },
           encoding: {
             x: { value: 290 }, y: { value: 290 },
             size: {
@@ -909,7 +928,7 @@
         },
         {
           data: { values: radial },
-          mark: { type: "text", fontSize: 12, fontWeight: "bold", color: "#8b949e" },
+          mark: { type: "text", fontSize: 12, fontWeight: "bold", color: "#3d4f63" },
           encoding: {
             x: { field: "label_x", type: "quantitative", scale: { domain: [-270, 270] }, axis: null },
             y: { field: "label_y", type: "quantitative", scale: { domain: [-270, 270] }, axis: null },
@@ -957,7 +976,7 @@
             y: { field: "date_label", type: "nominal", sort: "-x", title: null },
             x: { field: "concentration", type: "quantitative", title: "Concentration", scale: { zero: true } },
             x2: { datum: 0 },
-            color: { value: "#30363d" }
+            color: { value: "#c8d4e0" }
           }
         },
         // Lollipop dot
@@ -966,7 +985,7 @@
           encoding: {
             y: { field: "date_label", type: "nominal", sort: "-x" },
             x: { field: "concentration", type: "quantitative" },
-            color: { value: "#58a6ff" },
+            color: { value: "#1a56a0" },
             tooltip: [
               { field: "date_label", type: "nominal", title: "Month" },
               { field: "pollutant", type: "nominal", title: "Pollutant" },
@@ -1012,7 +1031,7 @@
     const ssTot = d3.sum(scatter, d => (d.pm25 - meanY) ** 2);
     const r2 = 1 - ssRes / ssTot;
 
-    const resThreshold = d3.quantile(withResid.map(d => d.residual).sort(d3.ascending), 0.88);
+    const resThreshold = d3.quantile(withResid.map(d => d.residual).sort(d3.ascending), 0.98);
     const outliers = withResid.filter(d => d.residual >= resThreshold);
 
     // WHO quadrant reference values
@@ -1023,7 +1042,7 @@
     const r2Label = [{ x: maxPM10 * 0.88, y: maxPM25 * 0.96, label: `R² = ${r2.toFixed(3)}` }];
 
     const years = [...new Set(scatter.map(d => d.year))].sort();
-    const yearColors = ["#79c0ff","#58a6ff","#388bfd","#1f6feb","#0d419d","#0a2d6e"];
+    const yearColors = ["#bfdbfe","#60a5fa","#2563eb","#1d4ed8","#1e3a8a","#172554"];
 
     const spec = {
       ...baseConfig(),
@@ -1064,7 +1083,7 @@
         // Quadrant label: "Both exceed WHO"
         {
           data: { values: [{ x: WHO_PM10 + 1, y: WHO_PM25 + 1, label: "Both exceed WHO" }] },
-          mark: { type: "text", align: "left", fontSize: 10, color: "#f78166", opacity: 0.7, fontStyle: "italic" },
+          mark: { type: "text", align: "left", fontSize: 10, color: "#b45309", opacity: 0.85, fontStyle: "italic" },
           encoding: {
             x: { field: "x", type: "quantitative" },
             y: { field: "y", type: "quantitative" },
@@ -1074,7 +1093,7 @@
         // Regression line
         {
           data: { values: scatter },
-          mark: { type: "line", color: "#39d353", strokeWidth: 2.5, strokeDash: [6, 3] },
+          mark: { type: "line", color: "#1a56a0", strokeWidth: 2.5, strokeDash: [6, 3] },
           transform: [{ regression: "pm25", on: "pm10" }],
           encoding: {
             x: { field: "pm10", type: "quantitative" },
@@ -1103,7 +1122,7 @@
         // Outlier labels
         {
           data: { values: outliers },
-          mark: { type: "text", dy: -13, dx: 2, fontSize: 11, fontWeight: "bold", color: "#f78166" },
+          mark: { type: "text", dy: -13, dx: 2, fontSize: 11, fontWeight: "bold", color: "#b45309" },
           encoding: {
             x: { field: "pm10", type: "quantitative" },
             y: { field: "pm25", type: "quantitative" },
@@ -1113,7 +1132,7 @@
         // R² annotation
         {
           data: { values: r2Label },
-          mark: { type: "text", align: "right", fontSize: 13, fontWeight: "bold", color: "#39d353" },
+          mark: { type: "text", align: "right", fontSize: 13, fontWeight: "bold", color: "#1a56a0" },
           encoding: {
             x: { field: "x", type: "quantitative" },
             y: { field: "y", type: "quantitative" },
@@ -1136,7 +1155,7 @@
     document.getElementById("stat-top-pop").textContent   = topPop  ? topPop.state       : "—";
 
     const pollutants = ["PM2.5","PM10","O3","NO2","SO2","CO"];
-    const pollutantColors = ["#58a6ff","#39d353","#f78166","#d2a8ff","#e3b341","#79c0ff"];
+    const pollutantColors = ["#1a56a0","#e07b00","#7b2d8b","#0891b2","#e05c9a","#2d8b4a"];
 
     const stats = pollutants.map((pollutant, i) => {
       const values = air.filter(d => d.pollutant === pollutant).map(d => d.concentration).filter(Number.isFinite);
@@ -1167,8 +1186,8 @@
     // Defs
     const defs = svg.append("defs");
     const grad = defs.append("radialGradient").attr("id", "radarFill");
-    grad.append("stop").attr("offset", "0%").attr("stop-color", "#39d353").attr("stop-opacity", 0.35);
-    grad.append("stop").attr("offset", "100%").attr("stop-color", "#39d353").attr("stop-opacity", 0.05);
+    grad.append("stop").attr("offset", "0%").attr("stop-color", "#1a56a0").attr("stop-opacity", 0.35);
+    grad.append("stop").attr("offset", "100%").attr("stop-color", "#1a56a0").attr("stop-opacity", 0.05);
 
     const glowFilter = defs.append("filter").attr("id", "radarGlow");
     glowFilter.append("feGaussianBlur").attr("stdDeviation", "5").attr("result", "coloredBlur");
@@ -1183,7 +1202,7 @@
       svg.append("polygon")
         .attr("points", pts)
         .attr("fill", "none")
-        .attr("stroke", "#30363d")
+        .attr("stroke", "#c8d4e0")
         .attr("stroke-width", 1)
         .attr("stroke-dasharray", pct < 1 ? "4,3" : "none");
 
@@ -1191,7 +1210,7 @@
       svg.append("text")
         .attr("x", cx + 4)
         .attr("y", cy - r + 4)
-        .attr("fill", "#4a5568")
+        .attr("fill", "#3d4f63")
         .attr("font-size", "10px")
         .text(`${Math.round(pct * 100)}%`);
     });
@@ -1202,7 +1221,7 @@
       svg.append("line")
         .attr("x1", cx).attr("y1", cy)
         .attr("x2", x).attr("y2", y)
-        .attr("stroke", "#30363d")
+        .attr("stroke", "#c8d4e0")
         .attr("stroke-width", 1);
     });
 
@@ -1211,7 +1230,7 @@
     svg.append("polygon")
       .attr("points", dataPoints.map(p => p.join(",")).join(" "))
       .attr("fill", "url(#radarFill)")
-      .attr("stroke", "#39d353")
+      .attr("stroke", "#1a56a0")
       .attr("stroke-width", 3)
       .attr("filter", "url(#radarGlow)");
 
@@ -1221,7 +1240,7 @@
       svg.append("circle")
         .attr("cx", x).attr("cy", y).attr("r", 6)
         .attr("fill", d.color)
-        .attr("stroke", "#0d1117")
+        .attr("stroke", "#ffffff")
         .attr("stroke-width", 2)
         .attr("filter", "url(#radarGlow)");
     });
@@ -1246,7 +1265,7 @@
       svg.append("text")
         .attr("x", lx).attr("y", ly + 16)
         .attr("text-anchor", anchor)
-        .attr("fill", "#8b949e")
+        .attr("fill", "#3d4f63")
         .attr("font-size", "11px")
         .text(`${(d.score * 100).toFixed(1)}% typical`);
     });
@@ -1255,14 +1274,14 @@
     svg.append("text")
       .attr("x", cx).attr("y", cy - 12)
       .attr("text-anchor", "middle")
-      .attr("fill", "#39d353")
+      .attr("fill", "#1a56a0")
       .attr("font-size", "13px")
       .attr("font-weight", "bold")
       .text("Pollutant");
     svg.append("text")
       .attr("x", cx).attr("y", cy + 6)
       .attr("text-anchor", "middle")
-      .attr("fill", "#39d353")
+      .attr("fill", "#1a56a0")
       .attr("font-size", "13px")
       .attr("font-weight", "bold")
       .text("Fingerprint");
@@ -1273,7 +1292,7 @@
   // ── 11. Chord diagram (D3) ────────────────────────────────
   function renderChord(air) {
     const pollutants = ["PM2.5", "PM10", "O3", "NO2", "SO2", "CO"];
-    const colors = ["#58a6ff","#39d353","#f78166","#d2a8ff","#e3b341","#79c0ff"];
+    const colors = ["#1a56a0","#e07b00","#7b2d8b","#0891b2","#e05c9a","#2d8b4a"];
     const n = pollutants.length;
 
     // Build co-occurrence matrix: count months where both pollutants are above their median
@@ -1312,7 +1331,7 @@
       .join("path")
         .attr("d", ribbon)
         .attr("fill", d => colors[d.source.index])
-        .attr("stroke", "#0d1117")
+        .attr("stroke", "#ffffff")
         .attr("stroke-width", 0.5)
         .attr("opacity", 0.55)
       .on("mouseover", function(event, d) {
@@ -1333,7 +1352,7 @@
     group.append("path")
       .attr("d", arc)
       .attr("fill", d => colors[d.index])
-      .attr("stroke", "#0d1117")
+      .attr("stroke", "#ffffff")
       .attr("stroke-width", 0.8)
       .on("mouseover", function(event, d) {
         ribbonG.selectAll("path")
@@ -1363,9 +1382,9 @@
   function renderSankey(air) {
     const pollutants = ["PM2.5","PM10","O3","NO2","SO2","CO"];
     const colors = {
-      "PM2.5":"#58a6ff","PM10":"#39d353","O3":"#f78166",
+      "PM2.5":"#1a56a0","PM10":"#e07b00","O3":"#7b2d8b",
       "NO2":"#d2a8ff","SO2":"#e3b341","CO":"#79c0ff",
-      "Low":"#39d353","Medium":"#e3b341","High":"#f78166"
+      "Low":"#2d8b4a","Medium":"#e07b00","High":"#e05c9a"
     };
 
     // Compute max per pollutant for risk classification
@@ -1465,7 +1484,7 @@
       const x0 = src.x + 16, x1 = tgt.x;
       const xm = (x0 + x1) / 2;
 
-      const col = colors[l.source.slice(1)] || colors[l.target.slice(1)] || "#58a6ff";
+      const col = colors[l.source.slice(1)] || colors[l.target.slice(1)] || "#1a56a0";
 
       svg.append("path")
         .attr("d", `M${x0},${y0} C${xm},${y0} ${xm},${y1} ${x1},${y1}
@@ -1483,7 +1502,7 @@
 
     // Nodes
     nodeList.forEach(n => {
-      const col = colors[n.label] || "#8b949e";
+      const col = colors[n.label] || "#3d4f63";
       svg.append("rect")
         .attr("x", n.x).attr("y", n.y)
         .attr("width", 16).attr("height", n.h)
@@ -1503,7 +1522,7 @@
     ["Year", "Pollutant", "Risk Level"].forEach((label, i) => {
       svg.append("text")
         .attr("x", colX[i]).attr("y", 18)
-        .attr("fill", "#8b949e").attr("font-size", "11px")
+        .attr("fill", "#3d4f63").attr("font-size", "11px")
         .attr("font-weight", "500").attr("letter-spacing", "0.1em")
         .attr("text-transform", "uppercase")
         .text(label.toUpperCase());
@@ -1512,13 +1531,8 @@
     container.appendChild(svg.node());
   }
 
-  // ── 13. Bubble word cloud — states sized by population (D3 force) ──
+  // ── 13. Bubble cloud — states sized by population (D3 force) ──
   function renderBubbleCloud(air, pop2025) {
-    // Use pop2025 state population as bubble size, PM2.5 mean as colour
-    const pm25 = air.filter(d => d.pollutant === "PM2.5");
-    const pm25Mean = d3.mean(pm25, d => d.concentration); // national mean for context
-
-    // Group pop2025 by state (already filtered to overall/both/overall)
     const stateData = pop2025.map(d => ({
       state: d.state,
       population: d.population,
@@ -1526,25 +1540,23 @@
     })).filter(d => d.population > 0);
 
     const popExtent = d3.extent(stateData, d => d.population);
-    const sizeScale = d3.scaleSqrt().domain(popExtent).range([22, 100]);
-    const fontScale = d3.scaleLinear().domain(popExtent).range([9, 28]);
-    // Colour by population size (larger = warmer)
+    const sizeScale = d3.scaleSqrt().domain(popExtent).range([24, 105]);
+    const fontScale = d3.scaleLinear().domain(popExtent).range([9, 26]);
     const colorScale = d3.scaleSequential(d3.interpolateBlues)
-      .domain([popExtent[0] * 0.5, popExtent[1]]);
+      .domain([popExtent[0] * 0.2, popExtent[1] * 0.75]);
 
-    const W = 860, H = 520;
+    const W = 900, H = 540;
     const container = document.getElementById("bubble-cloud");
     const svg = d3.create("svg")
       .attr("width", W).attr("height", H)
       .style("font-family", "'Playfair Display', serif");
 
-    // Defs for glow filter
     const defs = svg.append("defs");
-    const filter = defs.append("filter").attr("id", "glow-state");
-    filter.append("feGaussianBlur").attr("stdDeviation", "4").attr("result", "coloredBlur");
-    const feMerge = filter.append("feMerge");
-    feMerge.append("feMergeNode").attr("in", "coloredBlur");
-    feMerge.append("feMergeNode").attr("in", "SourceGraphic");
+    const glowF = defs.append("filter").attr("id", "glow-bubble");
+    glowF.append("feGaussianBlur").attr("stdDeviation", "3").attr("result", "coloredBlur");
+    const fm = glowF.append("feMerge");
+    fm.append("feMergeNode").attr("in", "coloredBlur");
+    fm.append("feMergeNode").attr("in", "SourceGraphic");
 
     const nodes = stateData.map(d => ({
       ...d,
@@ -1555,7 +1567,7 @@
 
     const sim = d3.forceSimulation(nodes)
       .force("center", d3.forceCenter(W / 2, H / 2))
-      .force("collision", d3.forceCollide(d => d.r + 5).strength(0.9))
+      .force("collision", d3.forceCollide(d => d.r + 4).strength(0.92))
       .force("x", d3.forceX(W / 2).strength(0.04))
       .force("y", d3.forceY(H / 2).strength(0.06))
       .stop();
@@ -1565,43 +1577,43 @@
     const g = svg.selectAll("g")
       .data(nodes)
       .join("g")
-        .attr("transform", d => `translate(${Math.max(d.r, Math.min(W - d.r, d.x))},${Math.max(d.r, Math.min(H - d.r, d.y))})`);
+        .attr("transform", d => `translate(${Math.max(d.r + 4, Math.min(W - d.r - 4, d.x))},${Math.max(d.r + 4, Math.min(H - d.r - 4, d.y))})`);
 
     // Glow ring
     g.append("circle")
-      .attr("r", d => d.r + 6)
+      .attr("r", d => d.r + 5)
       .attr("fill", "none")
       .attr("stroke", d => colorScale(d.population))
       .attr("stroke-width", 1.5)
-      .attr("opacity", 0.3)
-      .attr("filter", "url(#glow-state)");
+      .attr("opacity", 0.5)
+      .attr("filter", "url(#glow-bubble)");
 
-    // Main circle
+    // Main filled circle
     g.append("circle")
       .attr("r", d => d.r)
       .attr("fill", d => colorScale(d.population))
-      .attr("opacity", 0.22)
+      .attr("opacity", 0.55)
       .attr("stroke", d => colorScale(d.population))
-      .attr("stroke-width", 1.8);
+      .attr("stroke-width", 2);
 
     // State name
     g.append("text")
       .attr("text-anchor", "middle")
       .attr("dominant-baseline", "middle")
-      .attr("dy", d => d.r > 40 ? "-0.3em" : "0")
-      .attr("fill", d => colorScale(d.population))
+      .attr("dy", d => d.r > 42 ? "-0.35em" : "0")
+      .attr("fill", d => d3.color(colorScale(d.population)).darker(1.2))
       .attr("font-size", d => `${fontScale(d.population)}px`)
       .attr("font-weight", "700")
       .text(d => d.state);
 
-    // Population label (only for larger bubbles)
-    g.filter(d => d.r > 38)
+    // Population sub-label (larger bubbles only)
+    g.filter(d => d.r > 36)
       .append("text")
       .attr("text-anchor", "middle")
       .attr("dominant-baseline", "middle")
-      .attr("dy", "1.1em")
-      .attr("fill", d => colorScale(d.population))
-      .attr("opacity", 0.75)
+      .attr("dy", "1.05em")
+      .attr("fill", d => d3.color(colorScale(d.population)).darker(1.0))
+      .attr("opacity", 0.9)
       .attr("font-size", "10px")
       .attr("font-family", "'DM Sans', sans-serif")
       .text(d => `${d.population_million.toFixed(1)}M`);
@@ -1634,7 +1646,7 @@
     console.error(error);
     document.body.insertAdjacentHTML(
       "afterbegin",
-      `<div style="padding:16px;background:#3d1c1c;border-bottom:1px solid #a43f3f;color:#f78166;">
+      `<div style="padding:16px;background:#fff3cd;border-bottom:1px solid #b45309;color:#7c2d12;">
         ⚠ Data could not be loaded. Check the console and confirm CSV/GeoJSON URLs are accessible.
       </div>`
     );
